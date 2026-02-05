@@ -1,0 +1,10 @@
+#!/bin/bash
+read -p "Enter path: " FILE  
+
+chown root:root "$FILE"    ##for file
+
+if [ -d "$FILE" ]; then  ##for dir 
+  chmod 755 "$FILE"
+else
+  chmod 644 "$FILE"  ##for file
+fi
