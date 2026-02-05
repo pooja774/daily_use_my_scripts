@@ -1,0 +1,50 @@
+#!/bin/bash
+
+echo "===== SSH & NETWORK HEALTH CHECK ====="
+echo "Date: $(date)"
+echo
+
+NIC=$(ip route | awk '/default/ {print $5}')
+
+# NIC check
+if ! ip link show "$NIC" | grep -q "state UP"; then
+  echo "❌ NIC DOWN → bringing UP"
+  ip link set "$NIC" up
+else
+  echo "✔ NIC UP ($NIC)"
+fi
+
+# IP check
+if ! ip addr show "$NIC" | grep -q "inet "; then
+  echo "❌ No IP → restarting network"
+  systemctl restart NetworkManager 2>/dev/null || systemctl restart networking
+else
+  echo "✔ IP assigned"
+fi
+
+# Gateway check
+ip route | grep -q default && echo "✔ Gateway present" || echo "❌ No gateway"
+
+# Network reachability
+ping -c 2 8.8.8.8 &>/dev/null && echo "✔ Network reachable" || echo "❌ Network issue"
+
+# Networking service
+systemctl is-active --quiet NetworkManager || systemctl is-active --quiet networking \
+  && echo "✔ Networking service running" \
+  || systemctl start NetworkManager 2>/dev/null || systemctl start networking
+
+# SSH service
+systemctl is-active --quiet sshd && echo "✔ sshd running" || systemctl start sshd
+
+# SSH port
+ss -tulnp | grep -q ":22" && echo "✔ Port 22 listening" || systemctl restart sshd
+
+# Firewall
+if command -v firewall-cmd &>/dev/null; then
+  firewall-cmd --list-services | grep -q ssh \
+    && echo "✔ Firewall allows SSH" \
+    || firewall-cmd --add-service=ssh --permanent && firewall-cmd --reload
+fi
+
+echo
+echo "===== CHECK COMPLETE ====="
