@@ -1,0 +1,21 @@
+
+#!/bin/bash
+
+USER="$1"
+BACKUP="/backup/user_home"
+
+mkdir -p "$BACKUP"
+
+tar -czf "$BACKUP/${USER}_home_$(date +%F).tar.gz" /home/"$USER" \
+  && userdel -r "$USER"
+
+
+###############more simple ##############
+#!/bin/bash
+
+#USER="$1"
+
+#ar -czf /backup/${USER}_home.tar.gz /home/$USER
+#userdel -r $USER
+
+####################################
